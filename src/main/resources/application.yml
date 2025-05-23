@@ -1,0 +1,85 @@
+# Application Configuration
+app:
+  name: Qard Hasan for Education API
+  version: 1.0.0
+  description: Document processing API for Qard Hasan education platform
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# AI Service Configuration
+ai:
+  gemini:
+    api-key: 
+    base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+    timeout: 60000
+    max-retries: 3
+
+# File Upload Configuration
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+      enabled: true
+  application:
+    name: Qard_hasan_for_education
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.example.qard_hasan_for_education: DEBUG
+    org.springframework.web: INFO
+    org.apache.http: INFO
+    org.apache.hc: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Document Processing Configuration
+document:
+  processing:
+    supported-types:
+      - application/pdf
+      - image/jpeg
+      - image/png
+    max-pages: 50
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    root: DEBUG
+    com.example.qard_hasan_for_education: DEBUG
+    org.springframework.web: DEBUG
+    org.apache.http: DEBUG
+    org.apache.hc: DEBUG
+
+ai:
+  gemini:
+    api-key: AIzaSyDgKlOMPSrQOY8YbkS9VRxFgJUPVVu7YhM
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    root: WARN
+    com.example.qard_hasan_for_education: INFO
+
+ai:
+  gemini:
+    api-key:
