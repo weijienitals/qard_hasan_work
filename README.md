@@ -1,1 +1,0 @@
-# qard_hasan_work
