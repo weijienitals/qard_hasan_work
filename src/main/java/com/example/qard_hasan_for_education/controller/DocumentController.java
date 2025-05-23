@@ -1,5 +1,6 @@
 package com.example.qard_hasan_for_education.controller;
 
+import com.example.qard_hasan_for_education.model.PassportInfo;
 import com.example.qard_hasan_for_education.model.SimpleBankInfo;
 import com.example.qard_hasan_for_education.model.UniversityAcceptance;
 import com.example.qard_hasan_for_education.model.ScholarshipAcceptance;
@@ -69,6 +70,34 @@ public class DocumentController {
         }
     }
 
+    @PostMapping("/passport")
+    public ResponseEntity<?> processPassportImage(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            String contentType = file.getContentType();
+            if (!isImageFile(contentType)) {
+                return ResponseEntity.badRequest()
+                        .body("Only image files (JPEG, PNG, WEBP) are supported for passport processing");
+            }
+
+            PassportInfo result = processor.processPassportImage(file);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body("Error processing passport image: " + e.getMessage());
+        }
+    }
+
+    // Add this helper method
+    private boolean isImageFile(String contentType) {
+        return contentType != null && (
+                contentType.equals("image/jpeg") ||
+                        contentType.equals("image/jpg") ||
+                        contentType.equals("image/png") ||
+                        contentType.equals("image/webp")
+        );
+    }
+
     // Generic endpoint for any document type
     @PostMapping("/process")
     public ResponseEntity<String> processAnyDocument(
@@ -90,6 +119,9 @@ public class DocumentController {
                     break;
                 case "scholarship":
                     result = processor.processScholarshipLetter(file);
+                    break;
+                case "passport":
+                    result = processor.processPassportImage(file);
                     break;
                 default:
                     return ResponseEntity.badRequest()

@@ -47,7 +47,10 @@ document:
       - application/pdf
       - image/jpeg
       - image/png
+      - image/jpg
+      - image/webp
     max-pages: 50
+    max-image-size: 5MB
 
 ---
 # Development Profile

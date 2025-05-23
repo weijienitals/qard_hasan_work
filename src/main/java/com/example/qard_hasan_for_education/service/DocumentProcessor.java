@@ -1,5 +1,6 @@
 package com.example.qard_hasan_for_education.service;
 
+import com.example.qard_hasan_for_education.model.PassportInfo;
 import com.example.qard_hasan_for_education.model.SimpleBankInfo;
 import com.example.qard_hasan_for_education.model.UniversityAcceptance;
 import com.example.qard_hasan_for_education.model.ScholarshipAcceptance;
@@ -92,6 +93,68 @@ public class DocumentProcessor {
             """;
 
         return processDocument(pdfFile, prompt, ScholarshipAcceptance.class);
+    }
+
+    // Add this new method
+    public PassportInfo processPassportImage(MultipartFile imageFile) throws Exception {
+        String prompt = """
+        Please analyze this passport image and extract personal information in JSON format:
+        
+        {
+            "fullName": "string (full name as shown on passport)",
+            "passportNumber": "string (passport number)",
+            "nationality": "string (nationality/citizenship)",
+            "dateOfBirth": "YYYY-MM-DD (date of birth)",
+            "gender": "string (M/F/Male/Female)",
+            "expiryDate": "YYYY-MM-DD (passport expiry date)"
+        }
+        
+        Instructions:
+        - Extract data from the Machine Readable Zone (MRZ) at the bottom if visible
+        - For Indonesian passports, look for "REPUBLIK INDONESIA" text
+        - Return ONLY the JSON, no additional text
+        """;
+
+        return processImageDocument(imageFile, prompt, PassportInfo.class);
+    }
+
+    // Add this new method for image processing
+    private <T> T processImageDocument(MultipartFile imageFile, String prompt, Class<T> responseType) throws Exception {
+        String base64Image = Base64.getEncoder().encodeToString(imageFile.getBytes());
+        logger.info("Image file size: {} bytes, type: {}", imageFile.getBytes().length, imageFile.getContentType());
+
+        String requestBody = buildGeminiRequestForImage(base64Image, imageFile.getContentType(), prompt);
+        String response = sendToGemini(requestBody);
+        return parseGeminiResponse(response, responseType);
+    }
+
+    // Add this new method for building image requests
+    private String buildGeminiRequestForImage(String base64Image, String mimeType, String prompt) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+
+        Map<String, Object> request = new HashMap<>();
+        List<Map<String, Object>> contents = new ArrayList<>();
+        Map<String, Object> content = new HashMap<>();
+        List<Map<String, Object>> parts = new ArrayList<>();
+
+        // Add the instruction text
+        Map<String, Object> textPart = new HashMap<>();
+        textPart.put("text", prompt);
+        parts.add(textPart);
+
+        // Add the image file
+        Map<String, Object> filePart = new HashMap<>();
+        Map<String, Object> inlineData = new HashMap<>();
+        inlineData.put("mimeType", mimeType);
+        inlineData.put("data", base64Image);
+        filePart.put("inlineData", inlineData);
+        parts.add(filePart);
+
+        content.put("parts", parts);
+        contents.add(content);
+        request.put("contents", contents);
+
+        return mapper.writeValueAsString(request);
     }
 
     // Generic method that handles the API call
