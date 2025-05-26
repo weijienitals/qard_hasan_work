@@ -69,7 +69,7 @@ logging:
 
 ai:
   gemini:
-    api-key: AIzaSyDgKlOMPSrQOY8YbkS9VRxFgJUPVVu7YhM
+    api-key:
 
 ---
 # Production Profile
