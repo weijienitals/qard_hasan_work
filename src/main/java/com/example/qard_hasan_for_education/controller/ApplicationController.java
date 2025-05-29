@@ -1,10 +1,6 @@
 // ApplicationController.java
 package com.example.qard_hasan_for_education.controller;
 
-
-//import com.example.qard_hasan_for_education.model.ApplicationRiskProfile;
-//import com.example.qard_hasan_for_education.model.StudentApplicationData;
-//import com.example.qard_hasan_for_education.service.DocumentOrchestrationService;
 import com.example.qard_hasan_for_education.model.ApplicationRiskProfile;
 import com.example.qard_hasan_for_education.model.ApplicationStatus;
 import com.example.qard_hasan_for_education.model.ApprovalRecommendation;
@@ -32,7 +28,6 @@ public class ApplicationController {
     @PostMapping("/submit-complete")
     public ResponseEntity<?> submitCompleteApplication(
             @RequestParam("studentId") String studentId,
-            @RequestParam("requestedAmount") BigDecimal requestedAmount,
             @RequestParam("bankStatement") MultipartFile bankStatement,
             @RequestParam("universityLetter") MultipartFile universityLetter,
             @RequestParam("scholarshipLetter") MultipartFile scholarshipLetter,

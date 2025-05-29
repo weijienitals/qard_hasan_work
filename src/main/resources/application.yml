@@ -15,7 +15,7 @@ server:
 # AI Service Configuration
 ai:
   gemini:
-    api-key: AIzaSyDgKlOMPSrQOY8YbkS9VRxFgJUPVVu7YhM
+    api-key: 
     base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
     timeout: 60000
     max-retries: 3
@@ -91,7 +91,7 @@ logging:
 
 ai:
   gemini:
-    api-key: AIzaSyDgKlOMPSrQOY8YbkS9VRxFgJUPVVu7YhM
+    api-key: 
 
 
 
@@ -109,5 +109,5 @@ logging:
 
 ai:
   gemini:
-    api-key: ${GEMINI_API_KEY:AIzaSyDgKlOMPSrQOY8YbkS9VRxFgJUPVVu7YhM}
+    api-key: ${GEMINI_API_KEY:}
 

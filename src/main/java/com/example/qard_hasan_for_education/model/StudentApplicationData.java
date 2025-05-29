@@ -39,11 +39,7 @@ public class StudentApplicationData {
     @JsonProperty("processingTimeMs")
     private Long processingTimeMs;
 
-    @JsonProperty("requestedAmount")
-    private BigDecimal requestedAmount;
 
-    @JsonProperty("amountVerification")
-    private AmountVerification amountVerification;
 
     // New risk assessment field
     @JsonProperty("riskProfile")

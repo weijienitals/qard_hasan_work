@@ -1,6 +1,4 @@
-// Updated DocumentOrchestrationService.java
 package com.example.qard_hasan_for_education.service;
-
 import com.example.qard_hasan_for_education.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,16 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-
 @Service
 public class DocumentOrchestrationService {
-
     private static final Logger logger = LoggerFactory.getLogger(DocumentOrchestrationService.class);
 
     @Autowired
@@ -31,7 +25,6 @@ public class DocumentOrchestrationService {
 
     public StudentApplicationData processCompleteApplication(
             String studentId,
-            BigDecimal requestedAmount,
             MultipartFile bankStatement,
             MultipartFile universityLetter,
             MultipartFile scholarshipLetter,
@@ -119,21 +112,6 @@ public class DocumentOrchestrationService {
             storeApplicationStatus(applicationId, application);
             throw e;
         }
-
-        // NEW: Add requested amount to application
-        application.setRequestedAmount(requestedAmount);
-
-        // NEW: Verify requested amount
-        AmountVerification amountVerification = amountVerificationService.verifyRequestedAmount(
-                requestedAmount, application);
-        application.setAmountVerification(amountVerification);
-
-        // Continue with existing risk assessment...
-        ApplicationRiskProfile riskProfile = riskAssessmentService.assessRisk(application);
-        application.setRiskProfile(riskProfile);
-
-        return application;
-
     }
 
     public StudentApplicationData getApplicationStatus(String applicationId) {

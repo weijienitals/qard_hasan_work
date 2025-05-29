@@ -5,7 +5,6 @@ import com.example.qard_hasan_for_education.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import com.example.qard_hasan_for_education.service.AmountVerificationService;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -110,25 +109,6 @@ public class RiskAssessmentService {
             riskFactors.add("Zero or negative current balance");
         }
 
-        // NEW: Amount verification risk assessment
-        if (application.getAmountVerification() != null) {
-            AmountVerification amtVerif = application.getAmountVerification();
-
-            // Check if requested amount is excessive
-            if ("excessive".equals(amtVerif.getFundingGapAnalysis().getRequestedVsNeeded())) {
-                riskScore += 20;
-                riskFactors.add("Requested amount significantly exceeds funding need");
-            }
-
-            // Check affordability
-            if ("unaffordable".equals(amtVerif.getAffordabilityCheck().getAffordabilityStatus())) {
-                riskScore += 25;
-                riskFactors.add("Requested amount unaffordable based on income");
-            } else if ("tight".equals(amtVerif.getAffordabilityCheck().getAffordabilityStatus())) {
-                riskScore += 10;
-                riskFactors.add("Requested amount creates tight repayment schedule");
-            }
-        }
 
         // Determine risk level
         if (riskScore >= 60) {
