@@ -43,14 +43,18 @@ public class DocumentProcessor {
             
             {
                 "accountNumber": "string",
-                "bankName": "string", 
+                "bankName": "string",ƒ
                 "accountHolderName": "string",
-                "currentBalance": "number"
+                "currentBalance": "number",
+                "purchasingPower": "string"
             }
             
             Instructions:
             - currentBalance should be the most recent balance shown
             - accountNumber should not include spaces or dashes
+            - for purchasing power, help me go through the transactions in the bank statement and determine if this individual has a healthy expenditure
+            and indicate high or low in purchasing power afterwards.
+            - return me all the transactions as well in the bank statement
             - Return ONLY the JSON, no additional text
             """;
 
@@ -86,10 +90,16 @@ public class DocumentProcessor {
                 "recipientName": "string",
                 "amount": "number (scholarship amount)",
                 "provider": "string (organization providing scholarship)",
-                "academicYear": "string"
+                "academicYear": "string",
+                "isValidScholarship": boolean
             }
-            
-            Return ONLY the JSON, no additional text.
+            Instructions:
+            - Check is scholarshipName provided is a valid scholarship or not
+            - Check if provider is the actual provider of the scholarship
+            - Check if amount awarded from the scholarship is accurate or not
+            - include wether this is a valid scholarship or not field at the end of the json
+            - Return ONLY the JSON, no additional text
+        
             """;
 
         return processDocument(pdfFile, prompt, ScholarshipAcceptance.class);
@@ -98,11 +108,11 @@ public class DocumentProcessor {
     // Add this new method
     public PassportInfo processPassportImage(MultipartFile imageFile) throws Exception {
         String prompt = """
-        Please analyze this passport image and extract personal information in JSON format:
+        Please analyze this image and extract personal information in JSON format:
         
         {
             "fullName": "string (full name as shown on passport)",
-            "passportNumber": "string (passport number)",
+            "identification": "string (passport or identification number)",
             "nationality": "string (nationality/citizenship)",
             "dateOfBirth": "YYYY-MM-DD (date of birth)",
             "gender": "string (M/F/Male/Female)",
@@ -110,13 +120,19 @@ public class DocumentProcessor {
         }
         
         Instructions:
-        - Extract data from the Machine Readable Zone (MRZ) at the bottom if visible
-        - For Indonesian passports, look for "REPUBLIK INDONESIA" text
+        - identify if image is a passport or an identification card
+        - if it is a passport, identification field value should be passport number
+        - if it is a identification card, identification field value should be identification number
+        - there should not be key value called passport number in json data returned
+        
+        
         - Return ONLY the JSON, no additional text
         """;
 
         return processImageDocument(imageFile, prompt, PassportInfo.class);
     }
+
+
 
     // Add this new method for image processing
     private <T> T processImageDocument(MultipartFile imageFile, String prompt, Class<T> responseType) throws Exception {

@@ -16,14 +16,18 @@ public class SimpleBankInfo {
     @JsonProperty("currentBalance")
     private BigDecimal currentBalance;
 
+    @JsonProperty("purchasingPower")
+    private String purchasingPower;
+
     // Constructors
     public SimpleBankInfo() {}
 
-    public SimpleBankInfo(String accountNumber, String bankName, String accountHolderName, BigDecimal currentBalance) {
+    public SimpleBankInfo(String accountNumber, String bankName, String accountHolderName, BigDecimal currentBalance, String purchasingPower) {
         this.accountNumber = accountNumber;
         this.bankName = bankName;
         this.accountHolderName = accountHolderName;
         this.currentBalance = currentBalance;
+        this.purchasingPower = purchasingPower;
     }
 
     // Getters and Setters
@@ -39,6 +43,9 @@ public class SimpleBankInfo {
     public BigDecimal getCurrentBalance() { return currentBalance; }
     public void setCurrentBalance(BigDecimal currentBalance) { this.currentBalance = currentBalance; }
 
+    public String getPurchasingPower() { return purchasingPower; }
+    public void setPurchasingPower(String purchasingPower) { this.purchasingPower = purchasingPower; }
+
     @Override
     public String toString() {
         return "SimpleBankInfo{" +
@@ -46,6 +53,7 @@ public class SimpleBankInfo {
                 ", bankName='" + bankName + '\'' +
                 ", accountHolderName='" + accountHolderName + '\'' +
                 ", currentBalance=" + currentBalance +
+                ", purchasingPower=" + purchasingPower +
                 '}';
     }
 }

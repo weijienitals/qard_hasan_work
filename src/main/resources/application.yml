@@ -10,6 +10,8 @@ server:
   servlet:
     context-path: /
 
+
+
 # AI Service Configuration
 ai:
   gemini:
@@ -17,6 +19,8 @@ ai:
     base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
     timeout: 60000
     max-retries: 3
+
+
 
 # File Upload Configuration
 spring:
@@ -27,6 +31,24 @@ spring:
       enabled: true
   application:
     name: Qard_hasan_for_education
+
+# Redis Configuration for temporary storage
+redis:
+  host: localhost
+  port: 6379
+  timeout: 2000ms
+  jedis:
+    pool:
+      max-active: 8
+      max-wait: -1ms
+      max-idle: 8
+      min-idle: 0
+
+# REST Template Configuration
+rest:
+  template:
+    connection-timeout: 15000
+    read-timeout: 30000
 
 # Logging Configuration
 logging:
@@ -69,7 +91,9 @@ logging:
 
 ai:
   gemini:
-    api-key:
+    api-key: 
+
+
 
 ---
 # Production Profile
@@ -85,4 +109,5 @@ logging:
 
 ai:
   gemini:
-    api-key: 
+    api-key: ${GEMINI_API_KEY:}
+

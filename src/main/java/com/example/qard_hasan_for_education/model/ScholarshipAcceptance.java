@@ -19,6 +19,9 @@ public class ScholarshipAcceptance {
     @JsonProperty("academicYear")
     private String academicYear;
 
+    @JsonProperty("isValidScholarship")
+    private boolean isValidScholarship;
+
     // Constructors
     public ScholarshipAcceptance() {}
 
@@ -28,6 +31,7 @@ public class ScholarshipAcceptance {
         this.amount = amount;
         this.provider = provider;
         this.academicYear = academicYear;
+        this.isValidScholarship = true;
     }
 
     // Getters and Setters
@@ -46,6 +50,9 @@ public class ScholarshipAcceptance {
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
 
+    public Boolean getisValidScholarship() { return isValidScholarship; }
+    public void getisValidScholarship(boolean isValidScholarship) { this.isValidScholarship = isValidScholarship; }
+
     @Override
     public String toString() {
         return "ScholarshipAcceptance{" +
@@ -54,6 +61,7 @@ public class ScholarshipAcceptance {
                 ", amount=" + amount +
                 ", provider='" + provider + '\'' +
                 ", academicYear='" + academicYear + '\'' +
+                ", isValidScholarship=" + isValidScholarship +
                 '}';
     }
 }

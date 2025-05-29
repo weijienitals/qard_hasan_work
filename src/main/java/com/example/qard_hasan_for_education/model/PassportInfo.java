@@ -6,8 +6,8 @@ public class PassportInfo {
     @JsonProperty("fullName")
     private String fullName;
 
-    @JsonProperty("passportNumber")
-    private String passportNumber;
+    @JsonProperty("identification")
+    private String identification;
 
     @JsonProperty("nationality")
     private String nationality;
@@ -24,10 +24,10 @@ public class PassportInfo {
     // Constructors
     public PassportInfo() {}
 
-    public PassportInfo(String fullName, String passportNumber, String nationality,
+    public PassportInfo(String fullName, String identification, String nationality,
                         String dateOfBirth, String gender, String expiryDate) {
         this.fullName = fullName;
-        this.passportNumber = passportNumber;
+        this.identification = identification;
         this.nationality = nationality;
         this.dateOfBirth = dateOfBirth;
         this.gender = gender;
@@ -38,8 +38,8 @@ public class PassportInfo {
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
 
-    public String getPassportNumber() { return passportNumber; }
-    public void setPassportNumber(String passportNumber) { this.passportNumber = passportNumber; }
+    public String getPassportNumber() { return identification; }
+    public void setPassportNumber(String identification) { this.identification = identification; }
 
     public String getNationality() { return nationality; }
     public void setNationality(String nationality) { this.nationality = nationality; }
@@ -57,7 +57,7 @@ public class PassportInfo {
     public String toString() {
         return "PassportInfo{" +
                 "fullName='" + fullName + '\'' +
-                ", passportNumber='" + passportNumber + '\'' +
+                ", identification='" + identification + '\'' +
                 ", nationality='" + nationality + '\'' +
                 ", dateOfBirth='" + dateOfBirth + '\'' +
                 ", gender='" + gender + '\'' +
