@@ -2,6 +2,7 @@ package com.example.qard_hasan_for_education.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
+import java.util.List;
 
 public class SimpleBankInfo {
     @JsonProperty("accountNumber")
@@ -18,6 +19,34 @@ public class SimpleBankInfo {
 
     @JsonProperty("purchasingPower")
     private String purchasingPower;
+
+    // New risk assessment fields
+    @JsonProperty("incomeStability")
+    private String incomeStability;
+
+    @JsonProperty("expenseRatio")
+    private BigDecimal expenseRatio;
+
+    @JsonProperty("savingsTrend")
+    private String savingsTrend;
+
+    @JsonProperty("overdraftCount")
+    private Integer overdraftCount;
+
+    @JsonProperty("repaymentCapacity")
+    private String repaymentCapacity;
+
+    @JsonProperty("riskFactors")
+    private List<String> riskFactors;
+
+    @JsonProperty("monthlyIncome")
+    private BigDecimal monthlyIncome;
+
+    @JsonProperty("monthlyExpenses")
+    private BigDecimal monthlyExpenses;
+
+    @JsonProperty("transactions")
+    private List<String> transactions;
 
     // Constructors
     public SimpleBankInfo() {}
@@ -46,6 +75,33 @@ public class SimpleBankInfo {
     public String getPurchasingPower() { return purchasingPower; }
     public void setPurchasingPower(String purchasingPower) { this.purchasingPower = purchasingPower; }
 
+    public String getIncomeStability() { return incomeStability; }
+    public void setIncomeStability(String incomeStability) { this.incomeStability = incomeStability; }
+
+    public BigDecimal getExpenseRatio() { return expenseRatio; }
+    public void setExpenseRatio(BigDecimal expenseRatio) { this.expenseRatio = expenseRatio; }
+
+    public String getSavingsTrend() { return savingsTrend; }
+    public void setSavingsTrend(String savingsTrend) { this.savingsTrend = savingsTrend; }
+
+    public Integer getOverdraftCount() { return overdraftCount; }
+    public void setOverdraftCount(Integer overdraftCount) { this.overdraftCount = overdraftCount; }
+
+    public String getRepaymentCapacity() { return repaymentCapacity; }
+    public void setRepaymentCapacity(String repaymentCapacity) { this.repaymentCapacity = repaymentCapacity; }
+
+    public List<String> getRiskFactors() { return riskFactors; }
+    public void setRiskFactors(List<String> riskFactors) { this.riskFactors = riskFactors; }
+
+    public BigDecimal getMonthlyIncome() { return monthlyIncome; }
+    public void setMonthlyIncome(BigDecimal monthlyIncome) { this.monthlyIncome = monthlyIncome; }
+
+    public BigDecimal getMonthlyExpenses() { return monthlyExpenses; }
+    public void setMonthlyExpenses(BigDecimal monthlyExpenses) { this.monthlyExpenses = monthlyExpenses; }
+
+    public List<String> getTransactions() { return transactions; }
+    public void setTransactions(List<String> transactions) { this.transactions = transactions; }
+
     @Override
     public String toString() {
         return "SimpleBankInfo{" +
@@ -54,6 +110,8 @@ public class SimpleBankInfo {
                 ", accountHolderName='" + accountHolderName + '\'' +
                 ", currentBalance=" + currentBalance +
                 ", purchasingPower=" + purchasingPower +
+                ", incomeStability='" + incomeStability + '\'' +
+                ", repaymentCapacity='" + repaymentCapacity + '\'' +
                 '}';
     }
 }

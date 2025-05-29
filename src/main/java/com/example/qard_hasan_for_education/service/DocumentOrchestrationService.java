@@ -1,3 +1,4 @@
+// Updated DocumentOrchestrationService.java
 package com.example.qard_hasan_for_education.service;
 
 import com.example.qard_hasan_for_education.model.*;
@@ -8,6 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -22,10 +24,14 @@ public class DocumentOrchestrationService {
     private DocumentProcessor documentProcessor;
 
     @Autowired
+    private RiskAssessmentService riskAssessmentService;
+
+    @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
     public StudentApplicationData processCompleteApplication(
             String studentId,
+            BigDecimal requestedAmount,
             MultipartFile bankStatement,
             MultipartFile universityLetter,
             MultipartFile scholarshipLetter,
@@ -79,6 +85,18 @@ public class DocumentOrchestrationService {
             logger.info("Documents processed and aggregated successfully for application: {} in {}ms",
                     applicationId, processingTime);
 
+            // NEW: Perform risk assessment
+            logger.info("Starting risk assessment for application: {}", applicationId);
+            long riskAssessmentStart = System.currentTimeMillis();
+
+            ApplicationRiskProfile riskProfile = riskAssessmentService.assessRisk(application);
+            application.setRiskProfile(riskProfile);
+
+            long riskAssessmentTime = System.currentTimeMillis() - riskAssessmentStart;
+            logger.info("Risk assessment completed for application: {} in {}ms - Overall Risk: {}, Score: {}, Recommendation: {}",
+                    applicationId, riskAssessmentTime, riskProfile.getOverallRisk(),
+                    riskProfile.getRiskScore(), riskProfile.getApprovalRecommendation());
+
             // Set completion status and time
             application.setStatus(ApplicationStatus.COMPLETED);
             application.setProcessingEndTime(LocalDateTime.now());
@@ -86,8 +104,9 @@ public class DocumentOrchestrationService {
 
             storeApplicationStatus(applicationId, application);
 
-            logger.info("Application aggregation complete: {}, status: {}, processing time: {}ms",
-                    applicationId, application.getStatus(), application.getProcessingTimeMs());
+            logger.info("Application aggregation complete: {}, status: {}, processing time: {}ms, risk level: {}",
+                    applicationId, application.getStatus(), application.getProcessingTimeMs(),
+                    application.getRiskProfile().getOverallRisk());
 
             return application;
 
@@ -100,6 +119,21 @@ public class DocumentOrchestrationService {
             storeApplicationStatus(applicationId, application);
             throw e;
         }
+
+        // NEW: Add requested amount to application
+        application.setRequestedAmount(requestedAmount);
+
+        // NEW: Verify requested amount
+        AmountVerification amountVerification = amountVerificationService.verifyRequestedAmount(
+                requestedAmount, application);
+        application.setAmountVerification(amountVerification);
+
+        // Continue with existing risk assessment...
+        ApplicationRiskProfile riskProfile = riskAssessmentService.assessRisk(application);
+        application.setRiskProfile(riskProfile);
+
+        return application;
+
     }
 
     public StudentApplicationData getApplicationStatus(String applicationId) {
@@ -136,10 +170,17 @@ public class DocumentOrchestrationService {
                     Duration.ofDays(30)  // Keep application data for 30 days
             );
 
-            // Also store a shorter summary for quick lookups
+            // Also store a shorter summary for quick lookups including risk info
             String statusKey = "status:" + applicationId;
-            String statusSummary = String.format("{\"applicationId\":\"%s\",\"status\":\"%s\",\"lastUpdated\":\"%s\"}",
-                    applicationId, application.getStatus(), LocalDateTime.now());
+            String riskInfo = application.getRiskProfile() != null ?
+                    String.format(",\"riskLevel\":\"%s\",\"riskScore\":%d,\"approval\":\"%s\"",
+                            application.getRiskProfile().getOverallRisk(),
+                            application.getRiskProfile().getRiskScore(),
+                            application.getRiskProfile().getApprovalRecommendation()) : "";
+
+            String statusSummary = String.format(
+                    "{\"applicationId\":\"%s\",\"status\":\"%s\",\"lastUpdated\":\"%s\"%s}",
+                    applicationId, application.getStatus(), LocalDateTime.now(), riskInfo);
 
             redisTemplate.opsForValue().set(statusKey, statusSummary, Duration.ofDays(30));
 
@@ -192,6 +233,35 @@ public class DocumentOrchestrationService {
         if (file.getSize() > 5 * 1024 * 1024) { // 5MB limit for images
             throw new Exception(documentType + " file size exceeds 5MB limit");
         }
+    }
+
+    // NEW: Method to get just the risk assessment for an existing application
+    public ApplicationRiskProfile getApplicationRiskProfile(String applicationId) {
+        StudentApplicationData application = getApplicationStatus(applicationId);
+        return application != null ? application.getRiskProfile() : null;
+    }
+
+    // NEW: Method to re-assess risk for an existing application (if needed)
+    public ApplicationRiskProfile reassessRisk(String applicationId) throws Exception {
+        StudentApplicationData application = getApplicationStatus(applicationId);
+        if (application == null) {
+            throw new Exception("Application not found: " + applicationId);
+        }
+
+        if (!application.isDocumentProcessingComplete()) {
+            throw new Exception("Cannot assess risk - document processing not complete for: " + applicationId);
+        }
+
+        logger.info("Re-assessing risk for application: {}", applicationId);
+        ApplicationRiskProfile newRiskProfile = riskAssessmentService.assessRisk(application);
+
+        application.setRiskProfile(newRiskProfile);
+        storeApplicationStatus(applicationId, application);
+
+        logger.info("Risk re-assessment completed for application: {} - New Risk Level: {}, Score: {}",
+                applicationId, newRiskProfile.getOverallRisk(), newRiskProfile.getRiskScore());
+
+        return newRiskProfile;
     }
 
     // Functional interface to handle checked exceptions

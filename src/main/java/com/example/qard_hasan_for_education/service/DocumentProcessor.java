@@ -1,3 +1,4 @@
+// Updated DocumentProcessor.java
 package com.example.qard_hasan_for_education.service;
 
 import com.example.qard_hasan_for_education.model.PassportInfo;
@@ -36,54 +37,74 @@ public class DocumentProcessor {
     @Value("${ai.gemini.timeout:30000}")
     private int timeout;
 
-    // Method for bank documents
+    // Enhanced method for bank documents with risk assessment
     public SimpleBankInfo processBankDocument(MultipartFile pdfFile) throws Exception {
         String prompt = """
-            Please analyze this bank document and extract ONLY these 4 pieces of information in JSON format:
+            Please analyze this bank document and extract information including risk assessment in JSON format:
             
             {
                 "accountNumber": "string",
-                "bankName": "string",ƒ
+                "bankName": "string",
                 "accountHolderName": "string",
                 "currentBalance": "number",
-                "purchasingPower": "string"
+                "purchasingPower": "string",
+                "incomeStability": "stable/irregular/declining",
+                "expenseRatio": "number (percentage of income spent)",
+                "savingsTrend": "increasing/stable/decreasing",
+                "overdraftCount": "number (count of overdrafts in last 6 months)",
+                "repaymentCapacity": "excellent/good/fair/poor",
+                "monthlyIncome": "number (average monthly income)",
+                "monthlyExpenses": "number (average monthly expenses)",
+                "riskFactors": ["list of specific financial risk concerns"],
+                "transactions": ["list of recent transactions"]
             }
             
             Instructions:
-            - currentBalance should be the most recent balance shown
-            - accountNumber should not include spaces or dashes
-            - for purchasing power, help me go through the transactions in the bank statement and determine if this individual has a healthy expenditure
-            and indicate high or low in purchasing power afterwards.
-            - return me all the transactions as well in the bank statement
+            - Analyze transaction patterns to determine income stability
+            - Calculate expense ratio based on income vs expenses
+            - Identify overdrafts, bounced payments, or negative balances
+            - Assess savings growth or decline trend
+            - Identify risk factors like irregular income, high expenses, frequent overdrafts
+            - For repayment capacity, consider: excellent (>30% disposable income), good (20-30%), fair (10-20%), poor (<10%)
             - Return ONLY the JSON, no additional text
             """;
 
         return processDocument(pdfFile, prompt, SimpleBankInfo.class);
     }
 
-    // Method for university acceptance letters
+    // Enhanced method for university acceptance letters with risk assessment
     public UniversityAcceptance processUniversityLetter(MultipartFile pdfFile) throws Exception {
         String prompt = """
-            Please analyze this university acceptance letter and extract this information in JSON format:
+            Please analyze this university acceptance letter and extract information including risk assessment in JSON format:
             
             {
                 "universityName": "string",
                 "studentName": "string",
                 "program": "string (degree program/major)",
                 "acceptanceDate": "YYYY-MM-DD",
-                "semesterStart": "string (when classes begin)"
+                "semesterStart": "string (when classes begin)",
+                "universityTier": "top-tier/mid-tier/lower-tier",
+                "programMarketability": "high/medium/low",
+                "completionProbability": "very-high/high/medium/low",
+                "universityRanking": "string (if mentioned or if you know it)",
+                "riskFactors": ["list of academic risk concerns"]
             }
             
-            Return ONLY the JSON, no additional text.
+            Instructions:
+            - Assess university tier based on reputation and ranking (Stanford, MIT = top-tier; state schools = mid-tier; unknown/unaccredited = lower-tier)
+            - Evaluate program marketability (Engineering, CS, Medicine = high; Business, Liberal Arts = medium; Niche fields = low)
+            - Estimate completion probability based on program difficulty and university selectivity
+            - Identify risk factors like conditional acceptance, probationary status, or challenging programs
+            - Return ONLY the JSON, no additional text
             """;
 
         return processDocument(pdfFile, prompt, UniversityAcceptance.class);
     }
 
-    // Method for scholarship letters
+    // Enhanced method for scholarship letters with risk assessment
     public ScholarshipAcceptance processScholarshipLetter(MultipartFile pdfFile) throws Exception {
         String prompt = """
-            Please analyze this scholarship acceptance letter and extract this information in JSON format:
+            Please analyze this scholarship acceptance letter and extract information including risk assessment in JSON format:
             
             {
                 "scholarshipName": "string",
@@ -91,21 +112,27 @@ public class DocumentProcessor {
                 "amount": "number (scholarship amount)",
                 "provider": "string (organization providing scholarship)",
                 "academicYear": "string",
-                "isValidScholarship": boolean
+                "isValidScholarship": boolean,
+                "fundingGapRisk": "none/low/medium/high",
+                "providerCredibility": "verified/questionable/unknown",
+                "documentAuthenticity": "verified/suspicious/likely-fake",
+                "riskFactors": ["list of scholarship-related risk concerns"]
             }
+            
             Instructions:
-            - Check is scholarshipName provided is a valid scholarship or not
-            - Check if provider is the actual provider of the scholarship
-            - Check if amount awarded from the scholarship is accurate or not
-            - include wether this is a valid scholarship or not field at the end of the json
+            - Verify if the scholarship name and provider are legitimate and well-known
+            - Check if the amount seems reasonable for the type of scholarship
+            - Assess funding gap risk based on scholarship amount vs typical education costs
+            - Evaluate provider credibility (government agencies, major foundations = verified; unknown organizations = questionable)
+            - Look for signs of document fraud (poor formatting, spelling errors, unrealistic amounts)
+            - Identify risk factors like partial funding, conditional terms, or suspicious providers
             - Return ONLY the JSON, no additional text
-        
             """;
 
         return processDocument(pdfFile, prompt, ScholarshipAcceptance.class);
     }
 
-    // Add this new method
+    // Passport processing remains the same as it doesn't need risk assessment
     public PassportInfo processPassportImage(MultipartFile imageFile) throws Exception {
         String prompt = """
         Please analyze this image and extract personal information in JSON format:
@@ -125,14 +152,11 @@ public class DocumentProcessor {
         - if it is a identification card, identification field value should be identification number
         - there should not be key value called passport number in json data returned
         
-        
         - Return ONLY the JSON, no additional text
         """;
 
         return processImageDocument(imageFile, prompt, PassportInfo.class);
     }
-
-
 
     // Add this new method for image processing
     private <T> T processImageDocument(MultipartFile imageFile, String prompt, Class<T> responseType) throws Exception {

@@ -1,6 +1,8 @@
 package com.example.qard_hasan_for_education.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class StudentApplicationData {
@@ -36,6 +38,16 @@ public class StudentApplicationData {
 
     @JsonProperty("processingTimeMs")
     private Long processingTimeMs;
+
+    @JsonProperty("requestedAmount")
+    private BigDecimal requestedAmount;
+
+    @JsonProperty("amountVerification")
+    private AmountVerification amountVerification;
+
+    // New risk assessment field
+    @JsonProperty("riskProfile")
+    private ApplicationRiskProfile riskProfile;
 
     // Constructors
     public StudentApplicationData() {}
@@ -81,6 +93,9 @@ public class StudentApplicationData {
     public Long getProcessingTimeMs() { return processingTimeMs; }
     public void setProcessingTimeMs(Long processingTimeMs) { this.processingTimeMs = processingTimeMs; }
 
+    public ApplicationRiskProfile getRiskProfile() { return riskProfile; }
+    public void setRiskProfile(ApplicationRiskProfile riskProfile) { this.riskProfile = riskProfile; }
+
     // Utility methods
     public boolean isDocumentProcessingComplete() {
         return bankInfo != null && universityAcceptance != null &&
@@ -101,6 +116,7 @@ public class StudentApplicationData {
                 ", status=" + status +
                 ", submissionDate=" + submissionDate +
                 ", processingTimeMs=" + processingTimeMs +
+                ", riskProfile=" + riskProfile +
                 '}';
     }
 }

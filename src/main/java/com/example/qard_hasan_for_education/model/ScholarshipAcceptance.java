@@ -2,6 +2,7 @@ package com.example.qard_hasan_for_education.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
+import java.util.List;
 
 public class ScholarshipAcceptance {
     @JsonProperty("scholarshipName")
@@ -21,6 +22,19 @@ public class ScholarshipAcceptance {
 
     @JsonProperty("isValidScholarship")
     private boolean isValidScholarship;
+
+    // New risk assessment fields
+    @JsonProperty("fundingGapRisk")
+    private String fundingGapRisk;
+
+    @JsonProperty("providerCredibility")
+    private String providerCredibility;
+
+    @JsonProperty("documentAuthenticity")
+    private String documentAuthenticity;
+
+    @JsonProperty("riskFactors")
+    private List<String> riskFactors;
 
     // Constructors
     public ScholarshipAcceptance() {}
@@ -51,7 +65,19 @@ public class ScholarshipAcceptance {
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
 
     public Boolean getisValidScholarship() { return isValidScholarship; }
-    public void getisValidScholarship(boolean isValidScholarship) { this.isValidScholarship = isValidScholarship; }
+    public void setisValidScholarship(boolean isValidScholarship) { this.isValidScholarship = isValidScholarship; }
+
+    public String getFundingGapRisk() { return fundingGapRisk; }
+    public void setFundingGapRisk(String fundingGapRisk) { this.fundingGapRisk = fundingGapRisk; }
+
+    public String getProviderCredibility() { return providerCredibility; }
+    public void setProviderCredibility(String providerCredibility) { this.providerCredibility = providerCredibility; }
+
+    public String getDocumentAuthenticity() { return documentAuthenticity; }
+    public void setDocumentAuthenticity(String documentAuthenticity) { this.documentAuthenticity = documentAuthenticity; }
+
+    public List<String> getRiskFactors() { return riskFactors; }
+    public void setRiskFactors(List<String> riskFactors) { this.riskFactors = riskFactors; }
 
     @Override
     public String toString() {
@@ -62,6 +88,8 @@ public class ScholarshipAcceptance {
                 ", provider='" + provider + '\'' +
                 ", academicYear='" + academicYear + '\'' +
                 ", isValidScholarship=" + isValidScholarship +
+                ", fundingGapRisk='" + fundingGapRisk + '\'' +
+                ", documentAuthenticity='" + documentAuthenticity + '\'' +
                 '}';
     }
 }
