@@ -1,10 +1,10 @@
 // ApplicationController.java
 package com.example.qard_hasan_for_education.controller;
 
-import com.example.qard_hasan_for_education.model.ApplicationRiskProfile;
+import com.example.qard_hasan_for_education.model.riskAnalysis.ApplicationRiskProfile;
 import com.example.qard_hasan_for_education.model.ApplicationStatus;
 import com.example.qard_hasan_for_education.model.ApprovalRecommendation;
-import com.example.qard_hasan_for_education.model.RiskLevel;
+import com.example.qard_hasan_for_education.model.riskAnalysis.RiskLevel;
 import com.example.qard_hasan_for_education.model.StudentApplicationData;
 import com.example.qard_hasan_for_education.service.DocumentOrchestrationService;
 import org.slf4j.Logger;
@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/applications")

@@ -1,9 +1,9 @@
 package com.example.qard_hasan_for_education.controller;
 
-import com.example.qard_hasan_for_education.model.PassportInfo;
-import com.example.qard_hasan_for_education.model.SimpleBankInfo;
-import com.example.qard_hasan_for_education.model.UniversityAcceptance;
-import com.example.qard_hasan_for_education.model.ScholarshipAcceptance;
+import com.example.qard_hasan_for_education.model.individual.PassportInfo;
+import com.example.qard_hasan_for_education.model.individual.SimpleBankInfo;
+import com.example.qard_hasan_for_education.model.individual.UniversityAcceptance;
+import com.example.qard_hasan_for_education.model.individual.ScholarshipAcceptance;
 import com.example.qard_hasan_for_education.service.DocumentProcessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;

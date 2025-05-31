@@ -1,5 +1,10 @@
 package com.example.qard_hasan_for_education.service;
 import com.example.qard_hasan_for_education.model.*;
+import com.example.qard_hasan_for_education.model.individual.PassportInfo;
+import com.example.qard_hasan_for_education.model.individual.ScholarshipAcceptance;
+import com.example.qard_hasan_for_education.model.individual.SimpleBankInfo;
+import com.example.qard_hasan_for_education.model.individual.UniversityAcceptance;
+import com.example.qard_hasan_for_education.model.riskAnalysis.ApplicationRiskProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

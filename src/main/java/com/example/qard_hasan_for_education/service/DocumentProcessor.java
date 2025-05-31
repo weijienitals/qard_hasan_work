@@ -1,10 +1,10 @@
 // Updated DocumentProcessor.java
 package com.example.qard_hasan_for_education.service;
 
-import com.example.qard_hasan_for_education.model.PassportInfo;
-import com.example.qard_hasan_for_education.model.SimpleBankInfo;
-import com.example.qard_hasan_for_education.model.UniversityAcceptance;
-import com.example.qard_hasan_for_education.model.ScholarshipAcceptance;
+import com.example.qard_hasan_for_education.model.individual.PassportInfo;
+import com.example.qard_hasan_for_education.model.individual.SimpleBankInfo;
+import com.example.qard_hasan_for_education.model.individual.UniversityAcceptance;
+import com.example.qard_hasan_for_education.model.individual.ScholarshipAcceptance;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.client5.http.classic.methods.HttpPost;

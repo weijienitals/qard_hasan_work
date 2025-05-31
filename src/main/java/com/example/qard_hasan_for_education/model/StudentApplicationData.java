@@ -1,8 +1,12 @@
 package com.example.qard_hasan_for_education.model;
 
+import com.example.qard_hasan_for_education.model.individual.PassportInfo;
+import com.example.qard_hasan_for_education.model.individual.ScholarshipAcceptance;
+import com.example.qard_hasan_for_education.model.individual.SimpleBankInfo;
+import com.example.qard_hasan_for_education.model.individual.UniversityAcceptance;
+import com.example.qard_hasan_for_education.model.riskAnalysis.ApplicationRiskProfile;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class StudentApplicationData {
