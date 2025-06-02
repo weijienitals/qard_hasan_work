@@ -14,6 +14,8 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.util.Timeout;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Configuration
 @EnableAsync
@@ -51,13 +53,18 @@ public class AppConfig {
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
 
-        // Use JSON serializer for values
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer();
+        // Configure ObjectMapper for better serialization
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.findAndRegisterModules();
+
+        // Use JSON serializer for values with proper ObjectMapper
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
 
-        // Enable transaction support
-        template.setEnableTransactionSupport(true);
+        // REMOVE THIS LINE - it's causing transaction issues
+        // template.setEnableTransactionSupport(true);
 
         template.afterPropertiesSet();
         return template;

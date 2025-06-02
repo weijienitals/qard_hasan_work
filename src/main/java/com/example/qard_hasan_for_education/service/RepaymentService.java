@@ -12,12 +12,16 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
 public class RepaymentService {
 
     private static final Logger logger = LoggerFactory.getLogger(RepaymentService.class);
+
+    // Local cache for workaround
+    private final Map<String, LoanAccount> loanCache = new ConcurrentHashMap<>();
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -110,15 +114,155 @@ public class RepaymentService {
     }
 
     /**
-     * Get loan account details
+     * Get loan account details - WITH WORKAROUND
      */
     public LoanAccount getLoanAccount(String loanId) {
+        logger.info("=== Getting loan account for ID: {}", loanId);
+
         try {
-            Object result = redisTemplate.opsForValue().get("loan:" + loanId);
-            return result instanceof LoanAccount ? (LoanAccount) result : null;
-        } catch (Exception e) {
-            logger.error("Error retrieving loan account: {}", loanId, e);
+            // First check local cache (immediate workaround)
+            LoanAccount cachedLoan = loanCache.get(loanId);
+            if (cachedLoan != null) {
+                logger.info("=== Retrieved loan from local cache: {}", loanId);
+                return cachedLoan;
+            }
+
+            // Then try Redis with manual conversion
+            String key = "loan:" + loanId;
+            Object result = redisTemplate.opsForValue().get(key);
+
+            if (result == null) {
+                logger.error("=== Loan not found in Redis: {}", loanId);
+                return null;
+            }
+
+            // Handle LinkedHashMap to LoanAccount conversion
+            if (result instanceof java.util.LinkedHashMap) {
+                logger.info("=== Converting LinkedHashMap to LoanAccount for: {}", loanId);
+                LoanAccount loanAccount = convertMapToLoanAccount((java.util.LinkedHashMap<String, Object>) result);
+                if (loanAccount != null) {
+                    // Cache it for future use
+                    loanCache.put(loanId, loanAccount);
+                    logger.info("=== Successfully converted and cached loan: {}", loanId);
+                    return loanAccount;
+                }
+            } else if (result instanceof LoanAccount) {
+                LoanAccount loanAccount = (LoanAccount) result;
+                loanCache.put(loanId, loanAccount);
+                logger.info("=== Retrieved loan directly from Redis: {}", loanId);
+                return loanAccount;
+            }
+
+            logger.error("=== Unable to convert Redis object to LoanAccount: {}", result.getClass().getName());
             return null;
+
+        } catch (Exception e) {
+            logger.error("=== Exception retrieving loan account: {}", loanId, e);
+            return null;
+        }
+    }
+
+    /**
+     * Helper method to convert LinkedHashMap to LoanAccount
+     */
+    private LoanAccount convertMapToLoanAccount(Map<String, Object> map) {
+        try {
+            LoanAccount loan = new LoanAccount();
+
+            // Set basic fields
+            loan.setLoanId((String) map.get("loanId"));
+            loan.setStudentId((String) map.get("studentId"));
+            loan.setApplicationId((String) map.get("applicationId"));
+            loan.setStudentName((String) map.get("studentName"));
+            loan.setUniversityName((String) map.get("universityName"));
+            loan.setProgram((String) map.get("program"));
+            loan.setUniversityCountry((String) map.get("universityCountry"));
+            loan.setNationality((String) map.get("nationality"));
+
+            // Handle BigDecimal fields
+            if (map.get("principalAmount") != null) {
+                loan.setPrincipalAmount(new BigDecimal(map.get("principalAmount").toString()));
+            }
+            if (map.get("remainingBalance") != null) {
+                loan.setRemainingBalance(new BigDecimal(map.get("remainingBalance").toString()));
+            }
+            if (map.get("monthlyInstallment") != null) {
+                loan.setMonthlyInstallment(new BigDecimal(map.get("monthlyInstallment").toString()));
+            }
+
+            // Handle Integer fields
+            if (map.get("totalInstallments") != null) {
+                loan.setTotalInstallments(((Number) map.get("totalInstallments")).intValue());
+            }
+            if (map.get("completedInstallments") != null) {
+                loan.setCompletedInstallments(((Number) map.get("completedInstallments")).intValue());
+            }
+
+            // Handle Enum
+            if (map.get("loanStatus") != null) {
+                loan.setLoanStatus(LoanStatus.valueOf(map.get("loanStatus").toString()));
+            }
+
+            // Handle LocalDate fields (they come as [year, month, day] arrays)
+            if (map.get("loanStartDate") instanceof List) {
+                List<Integer> dateList = (List<Integer>) map.get("loanStartDate");
+                loan.setLoanStartDate(LocalDate.of(dateList.get(0), dateList.get(1), dateList.get(2)));
+            }
+
+            if (map.get("nextPaymentDate") instanceof List) {
+                List<Integer> dateList = (List<Integer>) map.get("nextPaymentDate");
+                loan.setNextPaymentDate(LocalDate.of(dateList.get(0), dateList.get(1), dateList.get(2)));
+            }
+
+            // Handle LocalDateTime fields (they come as [year, month, day, hour, minute, second, nano] arrays)
+            if (map.get("createdAt") instanceof List) {
+                List<Integer> dateTimeList = (List<Integer>) map.get("createdAt");
+                loan.setCreatedAt(LocalDateTime.of(
+                        dateTimeList.get(0), dateTimeList.get(1), dateTimeList.get(2),
+                        dateTimeList.get(3), dateTimeList.get(4), dateTimeList.get(5),
+                        dateTimeList.size() > 6 ? dateTimeList.get(6) : 0
+                ));
+            }
+
+            if (map.get("updatedAt") instanceof List) {
+                List<Integer> dateTimeList = (List<Integer>) map.get("updatedAt");
+                loan.setUpdatedAt(LocalDateTime.of(
+                        dateTimeList.get(0), dateTimeList.get(1), dateTimeList.get(2),
+                        dateTimeList.get(3), dateTimeList.get(4), dateTimeList.get(5),
+                        dateTimeList.size() > 6 ? dateTimeList.get(6) : 0
+                ));
+            }
+
+            return loan;
+
+        } catch (Exception e) {
+            logger.error("Error converting map to LoanAccount", e);
+            return null;
+        }
+    }
+
+    /**
+     * Store loan account with local caching
+     */
+    private void storeLoanAccount(LoanAccount loanAccount) {
+        try {
+            String key = "loan:" + loanAccount.getLoanId();
+            logger.info("Storing loan account: {}", loanAccount.getLoanId());
+
+            // Store in Redis
+            redisTemplate.opsForValue().set(key, loanAccount, Duration.ofDays(365));
+
+            // Store in local cache (workaround)
+            loanCache.put(loanAccount.getLoanId(), loanAccount);
+
+            // Store student mapping
+            redisTemplate.opsForSet().add("student_loans:" + loanAccount.getStudentId(),
+                    (Object) loanAccount.getLoanId());
+
+            logger.info("Successfully stored loan account in Redis and cache: {}", loanAccount.getLoanId());
+
+        } catch (Exception e) {
+            logger.error("Error storing loan account: {}", loanAccount.getLoanId(), e);
         }
     }
 
@@ -133,7 +277,7 @@ public class RepaymentService {
             return loanIdsObj.stream()
                     .filter(Objects::nonNull)
                     .map(Object::toString)
-                    .map(loanId -> (LoanAccount) redisTemplate.opsForValue().get("loan:" + loanId))
+                    .map(this::getLoanAccount) // Use our fixed getLoanAccount method
                     .filter(Objects::nonNull)
                     .filter(loan -> studentId.equals(loan.getStudentId()))
                     .collect(Collectors.toList());
@@ -207,7 +351,7 @@ public class RepaymentService {
 
         loanAccount.setUpdatedAt(LocalDateTime.now());
 
-        // Update stored loan account
+        // Update stored loan account (this will update both Redis and cache)
         storeLoanAccount(loanAccount);
 
         logger.info("Loan account updated: {} - Remaining balance: {}, Completed installments: {}/{}",
@@ -252,21 +396,6 @@ public class RepaymentService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
-        }
-    }
-
-    private void storeLoanAccount(LoanAccount loanAccount) {
-        try {
-            redisTemplate.opsForValue().set(
-                    "loan:" + loanAccount.getLoanId(),
-                    loanAccount,
-                    Duration.ofDays(365) // Keep for 1 year after completion
-            );
-
-            // Also store by student ID for quick lookups
-            redisTemplate.opsForSet().add("student_loans:" + loanAccount.getStudentId(), (Object) loanAccount.getLoanId());
-        } catch (Exception e) {
-            logger.error("Error storing loan account: {}", loanAccount.getLoanId(), e);
         }
     }
 

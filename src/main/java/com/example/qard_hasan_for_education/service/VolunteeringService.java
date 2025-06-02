@@ -11,11 +11,14 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class VolunteeringService {
 
     private static final Logger logger = LoggerFactory.getLogger(VolunteeringService.class);
+    private final Map<String, MentoringOffer> offerCache = new ConcurrentHashMap<>();
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -303,25 +306,149 @@ public class VolunteeringService {
         }
     }
 
-    private void storeMentoringOffer(MentoringOffer offer) {
+//    private void storeMentoringOffer(MentoringOffer offer) {
+//        try {
+//            redisTemplate.opsForValue().set(
+//                    "offer:" + offer.getOfferId(),
+//                    offer,
+//                    Duration.ofDays(30) // Keep offers for 30 days
+//            );
+//        } catch (Exception e) {
+//            logger.error("Error storing mentoring offer: {}", offer.getOfferId(), e);
+//        }
+//    }
+
+//    private MentoringOffer getMentoringOffer(String offerId) {
+//        try {
+//            Object result = redisTemplate.opsForValue().get("offer:" + offerId);
+//            return result instanceof MentoringOffer ? (MentoringOffer) result : null;
+//        } catch (Exception e) {
+//            logger.error("Error retrieving mentoring offer: {}", offerId, e);
+//            return null;
+//        }
+//    }
+
+    private MentoringOffer getMentoringOffer(String offerId) {
+        logger.info("=== Getting mentoring offer for ID: {}", offerId);
+
         try {
-            redisTemplate.opsForValue().set(
-                    "offer:" + offer.getOfferId(),
-                    offer,
-                    Duration.ofDays(30) // Keep offers for 30 days
-            );
+            // First check local cache
+            MentoringOffer cachedOffer = offerCache.get(offerId);
+            if (cachedOffer != null) {
+                logger.info("=== Retrieved offer from local cache: {}", offerId);
+                return cachedOffer;
+            }
+
+            // Then try Redis with manual conversion
+            String key = "offer:" + offerId;
+            Object result = redisTemplate.opsForValue().get(key);
+
+            if (result == null) {
+                logger.error("=== Mentoring offer not found in Redis: {}", offerId);
+                return null;
+            }
+
+            // Handle LinkedHashMap to MentoringOffer conversion
+            if (result instanceof java.util.LinkedHashMap) {
+                logger.info("=== Converting LinkedHashMap to MentoringOffer for: {}", offerId);
+                MentoringOffer offer = convertMapToMentoringOffer((java.util.LinkedHashMap<String, Object>) result);
+                if (offer != null) {
+                    // Cache it for future use
+                    offerCache.put(offerId, offer);
+                    logger.info("=== Successfully converted and cached offer: {}", offerId);
+                    return offer;
+                }
+            } else if (result instanceof MentoringOffer) {
+                MentoringOffer offer = (MentoringOffer) result;
+                offerCache.put(offerId, offer);
+                logger.info("=== Retrieved offer directly from Redis: {}", offerId);
+                return offer;
+            }
+
+            logger.error("=== Unable to convert Redis object to MentoringOffer: {}", result.getClass().getName());
+            return null;
+
         } catch (Exception e) {
-            logger.error("Error storing mentoring offer: {}", offer.getOfferId(), e);
+            logger.error("=== Exception retrieving mentoring offer: {}", offerId, e);
+            return null;
         }
     }
 
-    private MentoringOffer getMentoringOffer(String offerId) {
+    // Add this helper method to convert LinkedHashMap to MentoringOffer:
+    private MentoringOffer convertMapToMentoringOffer(Map<String, Object> map) {
         try {
-            Object result = redisTemplate.opsForValue().get("offer:" + offerId);
-            return result instanceof MentoringOffer ? (MentoringOffer) result : null;
+            MentoringOffer offer = new MentoringOffer();
+
+            // Set basic fields
+            offer.setOfferId((String) map.get("offerId"));
+            offer.setStudentId((String) map.get("studentId"));
+            offer.setTransactionId((String) map.get("transactionId"));
+            offer.setLoanId((String) map.get("loanId"));
+
+            // Handle Integer fields
+            if (map.get("installmentNumber") != null) {
+                offer.setInstallmentNumber(((Number) map.get("installmentNumber")).intValue());
+            }
+
+            // Handle Enum fields
+            if (map.get("response") != null) {
+                offer.setResponse(MentoringOfferResponse.valueOf(map.get("response").toString()));
+            }
+
+            offer.setDeclineReason((String) map.get("declineReason"));
+
+            // Handle LocalDateTime fields (they come as [year, month, day, hour, minute, second, nano] arrays)
+            if (map.get("createdAt") instanceof List) {
+                List<Integer> dateTimeList = (List<Integer>) map.get("createdAt");
+                offer.setCreatedAt(LocalDateTime.of(
+                        dateTimeList.get(0), dateTimeList.get(1), dateTimeList.get(2),
+                        dateTimeList.get(3), dateTimeList.get(4), dateTimeList.get(5),
+                        dateTimeList.size() > 6 ? dateTimeList.get(6) : 0
+                ));
+            }
+
+            if (map.get("expiresAt") instanceof List) {
+                List<Integer> dateTimeList = (List<Integer>) map.get("expiresAt");
+                offer.setExpiresAt(LocalDateTime.of(
+                        dateTimeList.get(0), dateTimeList.get(1), dateTimeList.get(2),
+                        dateTimeList.get(3), dateTimeList.get(4), dateTimeList.get(5),
+                        dateTimeList.size() > 6 ? dateTimeList.get(6) : 0
+                ));
+            }
+
+            if (map.get("respondedAt") instanceof List) {
+                List<Integer> dateTimeList = (List<Integer>) map.get("respondedAt");
+                offer.setRespondedAt(LocalDateTime.of(
+                        dateTimeList.get(0), dateTimeList.get(1), dateTimeList.get(2),
+                        dateTimeList.get(3), dateTimeList.get(4), dateTimeList.get(5),
+                        dateTimeList.size() > 6 ? dateTimeList.get(6) : 0
+                ));
+            }
+
+            return offer;
+
         } catch (Exception e) {
-            logger.error("Error retrieving mentoring offer: {}", offerId, e);
+            logger.error("Error converting map to MentoringOffer", e);
             return null;
+        }
+    }
+
+    // Also update the storeMentoringOffer method to include caching:
+    private void storeMentoringOffer(MentoringOffer offer) {
+        try {
+            String key = "offer:" + offer.getOfferId();
+            logger.info("Storing mentoring offer: {}", offer.getOfferId());
+
+            // Store in Redis
+            redisTemplate.opsForValue().set(key, offer, Duration.ofDays(30));
+
+            // Store in local cache (workaround)
+            offerCache.put(offer.getOfferId(), offer);
+
+            logger.info("Successfully stored mentoring offer in Redis and cache: {}", offer.getOfferId());
+
+        } catch (Exception e) {
+            logger.error("Error storing mentoring offer: {}", offer.getOfferId(), e);
         }
     }
 
