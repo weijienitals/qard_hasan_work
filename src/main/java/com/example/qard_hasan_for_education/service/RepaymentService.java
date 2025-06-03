@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class RepaymentService {
 
     private static final Logger logger = LoggerFactory.getLogger(RepaymentService.class);
-
+    private final Map<String, RepaymentTransaction> transactionCache = new ConcurrentHashMap<>();
     // Local cache for workaround
     private final Map<String, LoanAccount> loanCache = new ConcurrentHashMap<>();
 
@@ -60,9 +60,9 @@ public class RepaymentService {
     }
 
     /**
-     * Process a repayment transaction
+     * Process a repayment transaction - Updated to return PaymentResult with offerId
      */
-    public RepaymentTransaction processRepayment(String loanId, BigDecimal amount, String paymentMethod) throws Exception {
+    public PaymentResult processRepayment(String loanId, BigDecimal amount, String paymentMethod) throws Exception {
         logger.info("Processing repayment for loan: {}, amount: {}", loanId, amount);
 
         LoanAccount loanAccount = getLoanAccount(loanId);
@@ -102,10 +102,11 @@ public class RepaymentService {
 
             logger.info("Repayment successful for loan: {}, transaction: {}", loanId, transaction.getTransactionId());
 
-            // Trigger mentoring offer asynchronously
-            triggerMentoringOffer(loanAccount, transaction);
+            // Trigger mentoring offer asynchronously and get offerId
+            String offerId = triggerMentoringOffer(loanAccount, transaction);
 
-            return transaction;
+            // Create and return PaymentResult
+            return new PaymentResult(transaction, transaction.isMentoringOfferSent(), offerId);
         } else {
             transaction.setStatus(PaymentStatus.FAILED);
             storeTransaction(transaction);
@@ -290,23 +291,147 @@ public class RepaymentService {
     /**
      * Get repayment history for a loan
      */
+//    public List<RepaymentTransaction> getRepaymentHistory(String loanId) {
+//        try {
+//            Set<String> keys = redisTemplate.keys("transaction:*");
+//            if (keys == null) return Collections.emptyList();
+//
+//            return keys.stream()
+//                    .filter(Objects::nonNull)
+//                    .map(key -> (RepaymentTransaction) redisTemplate.opsForValue().get(key))
+//                    .filter(Objects::nonNull)
+//                    .filter(txn -> loanId.equals(txn.getLoanId()))
+//                    .sorted((t1, t2) -> t2.getPaymentDate().compareTo(t1.getPaymentDate()))
+//                    .collect(Collectors.toList());
+//        } catch (Exception e) {
+//            logger.error("Error retrieving repayment history for loan: {}", loanId, e);
+//            return Collections.emptyList();
+//        }
+//    }
+
     public List<RepaymentTransaction> getRepaymentHistory(String loanId) {
+        logger.info("=== Getting repayment history for loan: {}", loanId);
+
         try {
             Set<String> keys = redisTemplate.keys("transaction:*");
-            if (keys == null) return Collections.emptyList();
+            if (keys == null) {
+                logger.warn("No transaction keys found in Redis");
+                return Collections.emptyList();
+            }
 
-            return keys.stream()
+            logger.info("Found {} transaction keys in Redis", keys.size());
+
+            List<RepaymentTransaction> transactions = keys.stream()
                     .filter(Objects::nonNull)
-                    .map(key -> (RepaymentTransaction) redisTemplate.opsForValue().get(key))
+                    .map(key -> {
+                        try {
+                            // Check cache first
+                            String transactionId = key.replace("transaction:", "");
+                            RepaymentTransaction cached = transactionCache.get(transactionId);
+                            if (cached != null) {
+                                return cached;
+                            }
+
+                            Object result = redisTemplate.opsForValue().get(key);
+
+                            if (result == null) {
+                                logger.warn("Transaction key {} returned null", key);
+                                return null;
+                            }
+
+                            // Handle LinkedHashMap to RepaymentTransaction conversion
+                            if (result instanceof java.util.LinkedHashMap) {
+                                logger.debug("Converting LinkedHashMap to RepaymentTransaction for key: {}", key);
+                                RepaymentTransaction transaction = convertMapToRepaymentTransaction((java.util.LinkedHashMap<String, Object>) result);
+                                if (transaction != null) {
+                                    transactionCache.put(transactionId, transaction);
+                                }
+                                return transaction;
+                            } else if (result instanceof RepaymentTransaction) {
+                                RepaymentTransaction transaction = (RepaymentTransaction) result;
+                                transactionCache.put(transactionId, transaction);
+                                return transaction;
+                            } else {
+                                logger.warn("Unexpected object type for key {}: {}", key, result.getClass().getName());
+                                return null;
+                            }
+                        } catch (Exception e) {
+                            logger.error("Error processing transaction key: {}", key, e);
+                            return null;
+                        }
+                    })
                     .filter(Objects::nonNull)
                     .filter(txn -> loanId.equals(txn.getLoanId()))
                     .sorted((t1, t2) -> t2.getPaymentDate().compareTo(t1.getPaymentDate()))
                     .collect(Collectors.toList());
+
+            logger.info("Retrieved {} transactions for loan: {}", transactions.size(), loanId);
+            return transactions;
+
         } catch (Exception e) {
             logger.error("Error retrieving repayment history for loan: {}", loanId, e);
             return Collections.emptyList();
         }
     }
+
+
+    /**
+     * ADD this new method to convert LinkedHashMap to RepaymentTransaction:
+     */
+    private RepaymentTransaction convertMapToRepaymentTransaction(Map<String, Object> map) {
+        try {
+            RepaymentTransaction transaction = new RepaymentTransaction();
+
+            // Set basic fields
+            transaction.setTransactionId((String) map.get("transactionId"));
+            transaction.setLoanId((String) map.get("loanId"));
+            transaction.setStudentId((String) map.get("studentId"));
+            transaction.setPaymentMethod((String) map.get("paymentMethod"));
+            transaction.setReferenceNumber((String) map.get("referenceNumber"));
+
+            // Handle BigDecimal fields
+            if (map.get("amount") != null) {
+                transaction.setAmount(new BigDecimal(map.get("amount").toString()));
+            }
+
+            // Handle Integer fields
+            if (map.get("installmentNumber") != null) {
+                transaction.setInstallmentNumber(((Number) map.get("installmentNumber")).intValue());
+            }
+
+            // Handle Enum fields
+            if (map.get("status") != null) {
+                transaction.setStatus(PaymentStatus.valueOf(map.get("status").toString()));
+            }
+
+            // Handle Boolean fields
+            if (map.get("mentoringOfferSent") != null) {
+                transaction.setMentoringOfferSent((Boolean) map.get("mentoringOfferSent"));
+            }
+
+            if (map.get("mentoringOfferAccepted") != null) {
+                transaction.setMentoringOfferAccepted((Boolean) map.get("mentoringOfferAccepted"));
+            }
+
+            // Handle LocalDateTime fields (they come as [year, month, day, hour, minute, second, nano] arrays)
+            if (map.get("paymentDate") instanceof List) {
+                List<Integer> dateTimeList = (List<Integer>) map.get("paymentDate");
+                transaction.setPaymentDate(LocalDateTime.of(
+                        dateTimeList.get(0), dateTimeList.get(1), dateTimeList.get(2),
+                        dateTimeList.get(3), dateTimeList.get(4), dateTimeList.get(5),
+                        dateTimeList.size() > 6 ? dateTimeList.get(6) : 0
+                ));
+            }
+
+            return transaction;
+
+        } catch (Exception e) {
+            logger.error("Error converting map to RepaymentTransaction", e);
+            return null;
+        }
+    }
+
+
 
     /**
      * Get upcoming payment due date and amount
@@ -359,22 +484,27 @@ public class RepaymentService {
                 loanAccount.getCompletedInstallments(), loanAccount.getTotalInstallments());
     }
 
-    private void triggerMentoringOffer(LoanAccount loanAccount, RepaymentTransaction transaction) {
+    /**
+     * Trigger mentoring offer and return offerId
+     */
+    private String triggerMentoringOffer(LoanAccount loanAccount, RepaymentTransaction transaction) {
         try {
             // Check if student is eligible for mentoring (Indonesian studying abroad)
             if (loanAccount.isEligibleForMentoring()) {
                 logger.info("Triggering mentoring offer for student: {} after payment: {}",
                         loanAccount.getStudentId(), transaction.getTransactionId());
 
-                // Send mentoring offer through volunteering service
-                boolean offerSent = volunteeringService.sendMentoringOffer(loanAccount, transaction);
+                // Send mentoring offer through volunteering service and get offerId
+                String offerId = volunteeringService.sendMentoringOffer(loanAccount, transaction);
 
-                if (offerSent) {
+                if (offerId != null) {
                     transaction.setMentoringOfferSent(true);
                     storeTransaction(transaction);
 
                     // Send notification
                     notificationService.sendMentoringOfferNotification(loanAccount.getStudentId(), transaction);
+
+                    return offerId;
                 }
             } else {
                 logger.debug("Student not eligible for mentoring: {} - Nationality: {}, University Country: {}",
@@ -383,6 +513,8 @@ public class RepaymentService {
         } catch (Exception e) {
             logger.error("Error triggering mentoring offer for loan: {}", loanAccount.getLoanId(), e);
         }
+
+        return null;
     }
 
     private boolean processPaymentWithGateway(RepaymentTransaction transaction) {
@@ -399,19 +531,50 @@ public class RepaymentService {
         }
     }
 
+//    private void storeTransaction(RepaymentTransaction transaction) {
+//        try {
+//            redisTemplate.opsForValue().set(
+//                    "transaction:" + transaction.getTransactionId(),
+//                    transaction,
+//                    Duration.ofDays(365) // Keep transaction records for 1 year
+//            );
+//
+//            // Store in loan transaction list
+//            redisTemplate.opsForList().leftPush(
+//                    "loan_transactions:" + transaction.getLoanId(),
+//                    (Object) transaction.getTransactionId()
+//            );
+//        } catch (Exception e) {
+//            logger.error("Error storing transaction: {}", transaction.getTransactionId(), e);
+//        }
+//    }
+
+    /**
+     * REPLACE your existing storeTransaction method with this enhanced version:
+     */
     private void storeTransaction(RepaymentTransaction transaction) {
         try {
-            redisTemplate.opsForValue().set(
-                    "transaction:" + transaction.getTransactionId(),
-                    transaction,
-                    Duration.ofDays(365) // Keep transaction records for 1 year
-            );
+            String key = "transaction:" + transaction.getTransactionId();
+            logger.info("Storing transaction: {} for loan: {}", transaction.getTransactionId(), transaction.getLoanId());
+
+            // Store in Redis
+            redisTemplate.opsForValue().set(key, transaction, Duration.ofDays(365));
+
+            // Store in local cache
+            transactionCache.put(transaction.getTransactionId(), transaction);
 
             // Store in loan transaction list
             redisTemplate.opsForList().leftPush(
                     "loan_transactions:" + transaction.getLoanId(),
                     (Object) transaction.getTransactionId()
             );
+
+            // Verify storage immediately
+            Object stored = redisTemplate.opsForValue().get(key);
+            logger.info("Transaction stored successfully: {} (type: {})",
+                    transaction.getTransactionId(),
+                    stored != null ? stored.getClass().getSimpleName() : "null");
+
         } catch (Exception e) {
             logger.error("Error storing transaction: {}", transaction.getTransactionId(), e);
         }
@@ -431,5 +594,32 @@ public class RepaymentService {
         );
 
         return universityCountryMap.getOrDefault(universityName, "Unknown");
+    }
+
+    /**
+     * PaymentResult class to hold transaction and offerId
+     */
+    public static class PaymentResult {
+        private final RepaymentTransaction transaction;
+        private final boolean mentoringOfferSent;
+        private final String offerId;
+
+        public PaymentResult(RepaymentTransaction transaction, boolean mentoringOfferSent, String offerId) {
+            this.transaction = transaction;
+            this.mentoringOfferSent = mentoringOfferSent;
+            this.offerId = offerId;
+        }
+
+        public RepaymentTransaction getTransaction() {
+            return transaction;
+        }
+
+        public boolean isMentoringOfferSent() {
+            return mentoringOfferSent;
+        }
+
+        public String getOfferId() {
+            return offerId;
+        }
     }
 }

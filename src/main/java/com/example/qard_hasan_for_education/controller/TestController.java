@@ -90,4 +90,34 @@ public class TestController {
             return ResponseEntity.status(500).body(response);
         }
     }
+
+
+    @GetMapping("/transactions")
+    public ResponseEntity<?> checkTransactions() {
+        try {
+            Set<String> transactionKeys = redisTemplate.keys("transaction:*");
+            Set<String> loanTransactionKeys = redisTemplate.keys("loan_transactions:*");
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("transactionKeys", transactionKeys);
+            response.put("loanTransactionKeys", loanTransactionKeys);
+            response.put("totalTransactions", transactionKeys != null ? transactionKeys.size() : 0);
+
+            // Get actual transaction data
+            if (transactionKeys != null && !transactionKeys.isEmpty()) {
+                Map<String, Object> transactionData = new HashMap<>();
+                for (String key : transactionKeys) {
+                    Object txn = redisTemplate.opsForValue().get(key);
+                    transactionData.put(key, txn);
+                }
+                response.put("transactionData", transactionData);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
 }

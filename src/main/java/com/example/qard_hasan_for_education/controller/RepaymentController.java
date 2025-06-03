@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/repayment")
@@ -20,6 +21,7 @@ import java.util.Map;
 public class RepaymentController {
 
     private static final Logger logger = LoggerFactory.getLogger(RepaymentController.class);
+
 
     @Autowired
     private RepaymentService repaymentService;
@@ -61,7 +63,7 @@ public class RepaymentController {
     @PostMapping("/pay")
     public ResponseEntity<?> makeRepayment(@RequestBody PaymentRequest request) {
         try {
-            RepaymentTransaction transaction = repaymentService.processRepayment(
+            RepaymentService.PaymentResult paymentResult = repaymentService.processRepayment(
                     request.getLoanId(),
                     request.getAmount(),
                     request.getPaymentMethod()
@@ -70,8 +72,13 @@ public class RepaymentController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Payment processed successfully");
-            response.put("transaction", transaction);
-            response.put("mentoringOfferSent", transaction.isMentoringOfferSent());
+            response.put("transaction", paymentResult.getTransaction());
+            response.put("mentoringOfferSent", paymentResult.isMentoringOfferSent());
+
+            // Include offerId if mentoring offer was sent
+            if (paymentResult.getOfferId() != null) {
+                response.put("offerId", paymentResult.getOfferId());
+            }
 
             return ResponseEntity.ok(response);
 
@@ -83,12 +90,12 @@ public class RepaymentController {
     }
 
     /**
-     * Get loan account details
+     * Get loan account details - Changed to POST with request body
      */
-    @GetMapping("/loan/{loanId}")
-    public ResponseEntity<?> getLoanAccount(@PathVariable String loanId) {
+    @PostMapping("/loan")
+    public ResponseEntity<?> getLoanAccount(@RequestBody GetLoanRequest request) {
         try {
-            LoanAccount loanAccount = repaymentService.getLoanAccount(loanId);
+            LoanAccount loanAccount = repaymentService.getLoanAccount(request.getLoanId());
 
             if (loanAccount == null) {
                 return ResponseEntity.status(404)
@@ -105,12 +112,12 @@ public class RepaymentController {
     }
 
     /**
-     * Get all loans for a student
+     * Get all loans for a student - Changed to POST with request body
      */
-    @GetMapping("/student/{studentId}")
-    public ResponseEntity<?> getStudentLoans(@PathVariable String studentId) {
+    @PostMapping("/student")
+    public ResponseEntity<?> getStudentLoans(@RequestBody GetStudentLoansRequest request) {
         try {
-            List<LoanAccount> loans = repaymentService.getStudentLoans(studentId);
+            List<LoanAccount> loans = repaymentService.getStudentLoans(request.getStudentId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -127,12 +134,12 @@ public class RepaymentController {
     }
 
     /**
-     * Get repayment history for a loan
+     * Get repayment history for a loan - Changed to POST with request body
      */
-    @GetMapping("/history/{loanId}")
-    public ResponseEntity<?> getRepaymentHistory(@PathVariable String loanId) {
+    @PostMapping("/history")
+    public ResponseEntity<?> getRepaymentHistory(@RequestBody GetRepaymentHistoryRequest request) {
         try {
-            List<RepaymentTransaction> history = repaymentService.getRepaymentHistory(loanId);
+            List<RepaymentTransaction> history = repaymentService.getRepaymentHistory(request.getLoanId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -149,12 +156,12 @@ public class RepaymentController {
     }
 
     /**
-     * Get upcoming payment information
+     * Get upcoming payment information - Changed to POST with request body
      */
-    @GetMapping("/upcoming/{loanId}")
-    public ResponseEntity<?> getUpcomingPayment(@PathVariable String loanId) {
+    @PostMapping("/upcoming")
+    public ResponseEntity<?> getUpcomingPayment(@RequestBody GetUpcomingPaymentRequest request) {
         try {
-            Map<String, Object> paymentInfo = repaymentService.getUpcomingPayment(loanId);
+            Map<String, Object> paymentInfo = repaymentService.getUpcomingPayment(request.getLoanId());
 
             if (paymentInfo.isEmpty()) {
                 return ResponseEntity.status(404)
@@ -175,12 +182,12 @@ public class RepaymentController {
     }
 
     /**
-     * Get loan dashboard summary for a student
+     * Get loan dashboard summary for a student - Changed to POST with request body
      */
-    @GetMapping("/dashboard/{studentId}")
-    public ResponseEntity<?> getLoanDashboard(@PathVariable String studentId) {
+    @PostMapping("/dashboard")
+    public ResponseEntity<?> getLoanDashboard(@RequestBody GetDashboardRequest request) {
         try {
-            List<LoanAccount> loans = repaymentService.getStudentLoans(studentId);
+            List<LoanAccount> loans = repaymentService.getStudentLoans(request.getStudentId());
 
             Map<String, Object> dashboard = new HashMap<>();
             dashboard.put("totalLoans", loans.size());
@@ -291,5 +298,41 @@ public class RepaymentController {
 
         public String getPaymentMethod() { return paymentMethod; }
         public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    }
+
+    // New request DTOs for the converted GET endpoints
+    public static class GetLoanRequest {
+        private String loanId;
+
+        public String getLoanId() { return loanId; }
+        public void setLoanId(String loanId) { this.loanId = loanId; }
+    }
+
+    public static class GetStudentLoansRequest {
+        private String studentId;
+
+        public String getStudentId() { return studentId; }
+        public void setStudentId(String studentId) { this.studentId = studentId; }
+    }
+
+    public static class GetRepaymentHistoryRequest {
+        private String loanId;
+
+        public String getLoanId() { return loanId; }
+        public void setLoanId(String loanId) { this.loanId = loanId; }
+    }
+
+    public static class GetUpcomingPaymentRequest {
+        private String loanId;
+
+        public String getLoanId() { return loanId; }
+        public void setLoanId(String loanId) { this.loanId = loanId; }
+    }
+
+    public static class GetDashboardRequest {
+        private String studentId;
+
+        public String getStudentId() { return studentId; }
+        public void setStudentId(String studentId) { this.studentId = studentId; }
     }
 }
